@@ -15,13 +15,12 @@ Thanks for working on Splitbook. This guide covers how work moves from an issue 
 2. Create a branch for the issue (see naming below).
 3. Commit your work in small, clear steps.
 4. Push the branch and open a pull request into `main`.
-   - If you don't have write access to this repo, fork it, push the branch to your fork, and open the PR from there.
 5. Link the issue in the PR description with `Closes #<issue-number>`.
 6. Move the card to **In review** and wait for approval.
 7. Address review comments with new commits on the same branch. A new push dismisses the previous approval, so the reviewer will approve again.
 8. Once approved and all conversations are resolved, the PR is **squash-merged** into `main`.
 
-Direct pushes, force-pushes and self-approval on `main` are not allowed.
+`main` is protected: direct pushes, force-pushes and self-approval are blocked.
 
 ## Branch naming
 
@@ -63,7 +62,7 @@ Research issues are answered with a comment on the issue, not a PR. Use this for
 
 Only official documentation counts as a source. If something can't be confirmed, write "Could not confirm" and explain what you found.
 
-## Secrets and data
+## Secrets and data (this repo is public)
 
 - **Never commit secrets:** OAuth client secrets, refresh tokens, database URLs with passwords, service account keys or API keys.
 - Local values go in `.env`, which is ignored by git. `.env.example` lists variable names only, with no real values. When you add a new variable, add its name to `.env.example` in the same PR.
@@ -71,6 +70,8 @@ Only official documentation counts as a source. If something can't be confirmed,
 - **Never commit real health data**, including your own workouts as test files or logs.
 - Don't log tokens or raw health data.
 - If you ever commit a secret, **tell the maintainer immediately.** Deleting the file isn't enough, because git history keeps it; the secret must be rotated.
+
+GitHub secret scanning with push protection is enabled and will block pushes that look like they contain secrets. Don't bypass it; ask instead.
 
 ## Code style
 
