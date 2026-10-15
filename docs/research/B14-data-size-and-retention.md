@@ -15,6 +15,8 @@ Health Connect limits how much history an app may read, and the limit resets in 
 
 Two further limits sit on top. The user can set **auto-delete** in Health Connect — "Data older than the selected time period you've set will be automatically deleted each day" — which is outside our control; the exact periods offered are **Could not confirm**, as neither help page lists them. And Health Connect is a hub, not an archive: Google notes that "Other apps or devices may have a copy of your data," so the durable long-term copy lives in whichever app wrote the workout (Fitbit, Samsung Health, Strava), each with its own retention.
 
+**The window is anchored, not rolling.** It is measured from the moment permission was first granted, so it limits only how far *back* the first sync can reach. Everything recorded after the user connects Splitbook stays readable indefinitely: someone who opens the app weekly, or once in six months, loses nothing. What truncates history is a reinstall, which resets the anchor, or the user's own auto-delete setting. The practical sync model that follows is in §5 of the companion document — opening the app is the sync trigger, and not opening it costs no data.
+
 - https://developer.android.com/health-and-fitness/health-connect/read-data (checked 2026-10-15)
 - https://support.google.com/android/answer/12201227 (checked 2026-10-15)
 - https://support.google.com/android/answer/12201232 (checked 2026-10-15)

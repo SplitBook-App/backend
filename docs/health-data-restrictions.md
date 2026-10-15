@@ -10,7 +10,7 @@ All pages checked on 2026-10-15. Where a restriction could not be confirmed on a
 
 | # | Restriction | Exact rule | Impact |
 |---|---|---|---|
-| A1 | Default read window | Apps can read data "for up to 30 days prior to when any permission was first granted"; older reads error | First install sees only 30 days of history unless A2 |
+| A1 | Default read window | Apps can read data "for up to 30 days prior to when any permission was first granted"; older reads error | Anchored at grant, not rolling: limits only the initial backfill. Data recorded after connecting stays readable however long the user leaves the app unopened |
 | A2 | History permission | `READ_HEALTH_DATA_HISTORY` extends reads beyond 30 days | Must be requested for any meaningful backfill |
 | A3 | Own-data exemption does not help | Android 14+: no limit reading the app's *own written* data, 30-day limit on other data | Splitbook only reads, never writes, so this exemption never applies to us |
 | A4 | Uninstall resets everything | Uninstall revokes all permissions including history; on reinstall "the same default restrictions apply" | New phone or reinstall = history permanently truncated to 30 days |
@@ -29,7 +29,7 @@ Sources: [read-data](https://developer.android.com/health-and-fitness/health-con
 | B2 | Foreground by default | "Apps can only read data from Health Connect while they are in the foreground" | Default sync happens on app open |
 | B3 | Background read is a separate permission | `READ_HEALTH_DATA_IN_BACKGROUND`, gated on `FEATURE_READ_HEALTH_DATA_IN_BACKGROUND` being available | User must grant it; feature availability must be checked at runtime |
 | B4 | Background read of other apps' data | **Could not confirm.** Google's rate-limiting page states an app calling from background "will be able to read only its own inserted records"; the read-data page does not say how the background permission interacts with other apps' data | If the restrictive reading is correct, background sync is useless to us — we read only Fitbit/Watch-written records. **Must be tested on a device before relying on background sync** |
-| B5 | Change tokens expire | "An unused Changes token expires within 30 days" | Needs a last-read-timestamp fallback and client-ID dedupe |
+| B5 | Change tokens expire | "An unused Changes token expires within 30 days" | Needs a last-read-timestamp fallback and client-ID dedupe. Only triggers when a user leaves the app unopened over 30 days, so it is easy to leave untested |
 | B6 | Rate limits exist | Periodic and daily limits on read and changelog calls; "background rate limiting is stricter than foreground" | Numeric values are **not published**; use changelogs over raw reads, batch, and handle failure by resuming |
 | B7 | Interruptible | "Access to Health Connect may be interrupted at any point" | Sync must be resumable mid-run |
 
@@ -42,7 +42,7 @@ Sources: [sync-data](https://developer.android.com/health-and-fitness/guides/hea
 | C1 | Cannot be requested programmatically | `READ_EXERCISE_ROUTES` "can only be granted manually by a user in Health Connect settings or in the route request activity. Attempts to request it by applications will be ignored" | No standard runtime permission prompt; user must grant in settings, or per route |
 | C2 | Background reads blocked | Returns `ExerciseRouteResult.ConsentRequired` "even if your app has **Always allow** access" | Routes can never be fetched by a background job |
 | C3 | Per-route consent fallback | A dialog grants "a one-time read of a route" | Without Always allow, one tap per workout |
-| C4 | Foreground with Always allow | Restriction is documented as background-only, so foreground reads should work without per-route prompts — but Google never states this explicitly. **Could not confirm**; always handle `ConsentRequired` | Needs a device test to settle |
+| C4 | Foreground with Always allow | Restriction is documented as background-only, so foreground reads should work without per-route prompts — but Google never states this explicitly. **Could not confirm**; always handle `ConsentRequired` | If it holds, routes sync silently whenever the app is open and only background map-filling is lost. Needs a device test to settle |
 | C5 | Write overwrites | Updating a session without a route deletes the existing route | Never write back sessions |
 
 Sources: [exercise-routes](https://developer.android.com/health-and-fitness/health-connect/features/exercise-routes)
@@ -80,7 +80,9 @@ Retained because these apply if cloud mode is ever built. Full detail in `docs/r
 
 Sources: [OAuth 2.0](https://developers.google.com/identity/protocols/oauth2), [Manage app audience](https://support.google.com/cloud/answer/15549945), [app state overview](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview), [Health API verification](https://developers.google.com/health/app-verification), [verification FAQ](https://support.google.com/cloud/answer/13463817)
 
-## F. Apple / HealthKit (future iOS route)
+## F. Apple / HealthKit (out of scope)
+
+**Decision (2026-10-15): iOS is out of scope.** The $99/year Apple Developer Program is not justified for a hobby project. This section is kept as costing only, should that ever be revisited.
 
 | # | Restriction | Exact rule | Impact |
 |---|---|---|---|
