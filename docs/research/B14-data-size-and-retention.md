@@ -63,6 +63,27 @@ Even the heavy profile at full 1 Hz resolution is ~156 MB/year, so reaching 3 GB
 - https://developer.android.com/health-and-fitness/health-connect/features/exercise-routes (checked 2026-10-15)
 - https://developer.android.com/health-and-fitness/health-connect/data-types (checked 2026-10-15)
 
+## 4. Keeping it out of gigabytes: storage strategy
+
+Size is a design choice here, not a given. Four rules, in order of how much they save:
+
+**Rule 1 — Normalised typed columns, never JSON blobs.** Store each sample as integer columns in SQLite (`session_id`, `t_offset_ms`, `value`), not as a serialised API response. This alone is the 4–5x difference between ~69 MB and ~300 MB for a typical year, and it is the single decision that keeps a decade inside a few hundred megabytes.
+
+**Rule 2 — Store time as an offset, not a timestamp.** Each sample needs only milliseconds since its session start, which fits in a 4-byte integer, rather than a full 8-byte epoch timestamp or an ISO-8601 string. An ISO string costs ~24 bytes per sample against 4 — on a 1 Hz year that is the difference between ~69 MB and well over 200 MB.
+
+**Rule 3 — Downsample on ingest, keep the summary forever.** Nothing in the product needs per-second heart rate from two years ago; it needs the PR, the averages and the trend. So store two tiers:
+
+| Tier | Contents | Size | Retention |
+|---|---|---|---|
+| Summary | Session row, computed metrics, PR records, heart-rate zone totals | ~2 KB per workout | Forever, never auto-deleted |
+| Raw streams | Per-sample heart rate, distance, route points | ~80–390 KB per hour | Configurable; full resolution recent, downsampled or dropped when older |
+
+At ~2 KB per workout, the summary tier is about **0.4 MB per year** — a lifetime of training history costs less than a single photo. The entire size question is therefore only ever about the raw tier.
+
+**Rule 4 — Routes are the first thing to shed.** GPS is the largest single stream (~200 KB/hour at 1 Hz, over half the total). If space ever becomes a concern, dropping or simplifying old route geometry recovers more than anything else, and route lines survive heavy simplification with no visible change on a phone-sized map.
+
+Applying rules 1 and 2 alone, with everything kept at full resolution, a heavy user's decade lands near 1.5 GB; with rule 3 trimming raw streams beyond a couple of years it stays in the low hundreds of megabytes indefinitely. Gigabyte territory is only reached by storing raw JSON and never trimming — which rules 1 and 3 exist to prevent.
+
 ## Recommendation
 
 **Keep everything by default, and ship an export in v1.**
@@ -75,7 +96,7 @@ Concretely:
 2. **Request `READ_HEALTH_DATA_HISTORY`** so first install backfills more than 30 days. Treat that backfill as a one-off opportunity: whatever it captures may be the only copy we ever get.
 3. **Ship export and import in v1.** A single file the user can save off-device. Without it, a lost phone is total loss, and it doubles as the migration path if cloud mode arrives later.
 4. **If a retention control is offered, scope it to raw streams only** — the user may discard per-second heart rate, distance and route points beyond a period they choose, while summaries and PRs stay forever. Routes first, as the largest stream. Warn plainly at the point of choosing that discarded raw data cannot be re-synced.
-5. **Store normalised typed columns, never raw JSON blobs.** This is the single decision that keeps a decade of history inside a few hundred megabytes.
+5. **Store normalised typed columns, never raw JSON blobs**, per the four rules in §4. This is the single decision that keeps a decade of history inside a few hundred megabytes.
 
 ## Spec impact
 
@@ -85,3 +106,4 @@ Proposed changes to `docs/SPEC.md` in the SplitBook-App/app repo. Listed only �
 - **Finding 2 (no reliable re-sync) — Change §3 and §16.** State that the on-device database is the system of record, not a cache, and that locally deleted data is unrecoverable. Add export and import of all user data as v1 scope, and state that a lost or reset device means total data loss without it.
 - **Finding 3 (sizing) — Change §17.** Replace the Cloud Storage sizing assumptions for local mode with on-device figures: roughly 80–390 KB per workout hour depending on sample rate, roughly 14–156 MB per year. Add the design rule that raw streams are stored as normalised typed columns, never as JSON blobs, and cite #9 as the source of measured figures once available.
 - **Finding 4 (retention policy) — Change §3.** Record the default of indefinite retention, that summaries and PR records are never auto-deleted, and that any user-configurable retention applies to raw streams only with an explicit warning that the data cannot be recovered.
+- **Finding 5 (storage strategy) — Change §17.** Record the four storage rules: normalised typed columns rather than JSON blobs; sample times stored as integer offsets from session start; a two-tier split where the ~2 KB summary tier is kept forever and only raw streams are ever trimmed; and GPS route geometry as the first stream to downsample or drop under space pressure.
